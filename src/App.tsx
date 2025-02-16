@@ -1,14 +1,14 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, JSX } from "react";
 import { FFmpeg, LogEvent } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import "./App.css";
 
 const baseURL = "https://unpkg.com/@ffmpeg/core@latest/dist/esm";
 
-function App() {
+function App(): JSX.Element {
   // @ffmpeg/core がロードされているかどうか
   const [loaded, setLoaded] = useState(false);
-  
+
   // キャプチャデータ
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
@@ -35,7 +35,7 @@ function App() {
    * キャプチャ開始されたときのハンドラ
    */
   const startHandler = useCallback(async () => {
-    if (monitorRef.current === null || monitorRef.current === undefined) return;
+    if (monitorRef.current === null) return;
 
     try {
       // 前回のキャプチャ内容を削除
@@ -67,12 +67,13 @@ function App() {
    * キャプチャ停止されたときのハンドラ
    */
   const stopHandler = useCallback(() => {
-    if (mediaStreamRef.current === null || mediaStreamRef.current === undefined)
-      return;
+    if (mediaStreamRef.current === null) return;
 
     // MediaStream の全トラックを停止
     const tracks = mediaStreamRef.current.getTracks();
-    tracks.forEach((track) => track.stop());
+    tracks.forEach((track) => {
+      track.stop();
+    });
   }, []);
 
   /**
@@ -81,7 +82,7 @@ function App() {
   const logHandler = useCallback(({ message }: LogEvent) => {
     console.log(message);
 
-    if (logRef.current === null || logRef.current === undefined) return;
+    if (logRef.current === null || logRef.current.textContent === null) return;
     logRef.current.textContent += `\n${message}`;
   }, []);
 
@@ -99,7 +100,7 @@ function App() {
         "application/wasm"
       ),
     });
-    
+
     setLoaded(true);
   }, [logHandler]);
 
@@ -107,7 +108,7 @@ function App() {
    * GIFアニメに変換ボタンを押下されたときのハンドラ
    */
   const transcodeHandler = useCallback(async () => {
-    if (imageRef.current === null || imageRef.current === undefined) return;
+    if (imageRef.current === null) return;
 
     // キャプチャデータを ffmpeg に読み込ませ、GIFアニメに変換する
     const ffmpeg = ffmpegRef.current;
@@ -123,7 +124,7 @@ function App() {
    * キャプチャデータが変更されたときの処理
    */
   useEffect(() => {
-    if (videoRef.current === null || videoRef.current === undefined) return;
+    if (videoRef.current === null) return;
     if (recordedChunks.length === 0) return;
 
     videoRef.current.src = URL.createObjectURL(new Blob(recordedChunks));
