@@ -73,9 +73,33 @@ function App(): JSX.Element {
   );
 
   /**
+   * 画面選択するときのハンドラ
+   */
+  const selectHandler = useCallback(async () => {
+    if (canvasRef.current === null) return;
+
+    // ディスプレイの内容を MediaStream として取得
+    const canvas = canvasRef.current;
+
+    inputStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        displaySurface: "window",
+      },
+      audio: false,
+    });
+
+    // キャンバスに inputStream から取得した映像を表示する
+    const ctx = canvas.getContext("2d");
+    const track = inputStreamRef.current.getVideoTracks()[0];
+    const processor = new MediaStreamTrackProcessor({ track });
+    const reader = processor.readable.getReader();
+    await readChunk(ctx, reader);
+  }, [readChunk]);
+
+  /**
    * キャプチャ開始されたときのハンドラ
    */
-  const startHandler = useCallback(async () => {
+  const startHandler = useCallback(() => {
     if (canvasRef.current === null) return;
 
     try {
@@ -91,25 +115,10 @@ function App(): JSX.Element {
         handleDataAvailable
       );
       mediaRecorderRef.current.start();
-      
-      // ディスプレイの内容を MediaStream として取得
-      inputStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "window",
-        },
-        audio: false,
-      });
-
-      // キャンバスに inputStream から取得した映像を表示する
-      const ctx = canvas.getContext("2d");
-      const track = inputStreamRef.current.getVideoTracks()[0];
-      const processor = new MediaStreamTrackProcessor({ track });
-      const reader = processor.readable.getReader();
-      await readChunk(ctx, reader);
     } catch (err) {
       console.error(err);
     }
-  }, [handleDataAvailable, readChunk]);
+  }, [handleDataAvailable]);
 
   /**
    * キャプチャ停止されたときのハンドラ
@@ -188,6 +197,7 @@ function App(): JSX.Element {
       <p>
         {loaded ? (
           <>
+            <button onClick={selectHandler}>画面選択</button>
             <button onClick={startHandler}>キャプチャ開始</button>
             <button onClick={stopHandler}>キャプチャ停止</button>
             <button onClick={transcodeHandler}>GIFアニメに変換</button>
