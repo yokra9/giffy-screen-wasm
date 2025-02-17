@@ -13,15 +13,16 @@ function App(): JSX.Element {
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
   const ffmpegRef = useRef(new FFmpeg());
-  const monitorRef = useRef<HTMLVideoElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const logRef = useRef<HTMLPreElement>(null);
-  const mediaStreamRef = useRef<MediaStream>(null);
+  const inputStreamRef = useRef<MediaStream>(null);
+  const captureStreamRef = useRef<MediaStream>(null);
   const mediaRecorderRef = useRef<MediaRecorder>(null);
 
   /**
-   * MediaRecorderでデータが利用可能になったときのハンドラ
+   * MediaRecorder でデータが利用可能になったときのハンドラ
    */
   const handleDataAvailable = useCallback(
     ({ data }: BlobEvent) => {
@@ -32,46 +33,95 @@ function App(): JSX.Element {
   );
 
   /**
+   * キャンバスに ReadableStreamDefaultReader の内容を表示する
+   */
+  const readChunk = useCallback(
+    async (
+      ctx: CanvasRenderingContext2D | null,
+      reader: ReadableStreamDefaultReader<VideoFrame>
+    ) => {
+      const canvas = canvasRef.current;
+      if (canvas === null) return;
+      if (ctx === null) return;
+
+      const { done, value } = await reader.read();
+
+      if (value === undefined) return;
+
+      canvas.height = (canvas.width * value.displayHeight) / value.displayWidth;
+
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(
+        value,
+        0,
+        0,
+        value.displayWidth,
+        value.displayHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      value.close();
+
+      if (!done) {
+        await readChunk(ctx, reader);
+      }
+    },
+    []
+  );
+
+  /**
    * キャプチャ開始されたときのハンドラ
    */
   const startHandler = useCallback(async () => {
-    if (monitorRef.current === null) return;
+    if (canvasRef.current === null) return;
 
     try {
       // 前回のキャプチャ内容を削除
       setRecordedChunks([]);
 
-      // ディスプレイの内容を MediaStream として取得
-      mediaStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "window",
-        },
-        audio: false,
-      });
-      // キャプチャ中の内容を表示
-      monitorRef.current.srcObject = mediaStreamRef.current;
-
-      // MediaRecorder に MediaStream を流し込んでキャプチャ
-      mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current);
+      // キャンバスの内容を MediaRecorder でキャプチャする
+      const canvas = canvasRef.current;
+      captureStreamRef.current = canvas.captureStream();
+      mediaRecorderRef.current = new MediaRecorder(captureStreamRef.current);
       mediaRecorderRef.current.addEventListener(
         "dataavailable",
         handleDataAvailable
       );
       mediaRecorderRef.current.start();
+      
+      // ディスプレイの内容を MediaStream として取得
+      inputStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: "window",
+        },
+        audio: false,
+      });
+
+      // キャンバスに inputStream から取得した映像を表示する
+      const ctx = canvas.getContext("2d");
+      const track = inputStreamRef.current.getVideoTracks()[0];
+      const processor = new MediaStreamTrackProcessor({ track });
+      const reader = processor.readable.getReader();
+      await readChunk(ctx, reader);
     } catch (err) {
       console.error(err);
     }
-  }, [handleDataAvailable]);
+  }, [handleDataAvailable, readChunk]);
 
   /**
    * キャプチャ停止されたときのハンドラ
    */
   const stopHandler = useCallback(() => {
-    if (mediaStreamRef.current === null) return;
+    if (inputStreamRef.current === null) return;
+    inputStreamRef.current.getTracks().forEach((track) => {
+      track.stop();
+    });
 
-    // MediaStream の全トラックを停止
-    const tracks = mediaStreamRef.current.getTracks();
-    tracks.forEach((track) => {
+    if (captureStreamRef.current === null) return;
+    captureStreamRef.current.getTracks().forEach((track) => {
       track.stop();
     });
   }, []);
@@ -148,7 +198,7 @@ function App(): JSX.Element {
       </p>
 
       <h2>モニタ</h2>
-      <video ref={monitorRef} width={720} autoPlay></video>
+      <canvas ref={canvasRef} width={720}></canvas>
 
       <h2>キャプチャ内容</h2>
       <video ref={videoRef} width={720} controls></video>
