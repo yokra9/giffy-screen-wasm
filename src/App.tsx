@@ -225,7 +225,7 @@ function App(): JSX.Element {
         width={canvasWidth}
         height={canvasHeight}
         style={{ border: "2px solid black" }}
-      ></canvas>
+      />
 
       <br />
       <label>
@@ -280,11 +280,11 @@ function App(): JSX.Element {
       </label>
 
       <h2>キャプチャ内容</h2>
-      <video ref={videoRef} controls></video>
+      <video ref={videoRef} controls />
 
       <h2>変換結果</h2>
-      <img ref={imageRef}></img>
-      <pre ref={logRef}></pre>
+      <img ref={imageRef} />
+      <pre ref={logRef} />
     </>
   );
 }
