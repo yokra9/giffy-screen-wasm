@@ -12,6 +12,17 @@ function App(): JSX.Element {
   // キャプチャデータ
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
+  // キャプチャ映像がキャンバス上のどこにあるか
+  const [destX, setDestX] = useState(0);
+  const [destY, setDestY] = useState(0);
+
+  // キャプチャ映像の表示倍率
+  const [scale, setScale] = useState(0.5);
+
+  // キャンバスのサイズ
+  const [canvasWidth, setCanvasWidth] = useState(1280);
+  const [canvasHeight, setCanvasHeight] = useState(720);
+
   const ffmpegRef = useRef(new FFmpeg());
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,7 +49,10 @@ function App(): JSX.Element {
   const readChunk = useCallback(
     async (
       ctx: CanvasRenderingContext2D | null,
-      reader: ReadableStreamDefaultReader<VideoFrame>
+      reader: ReadableStreamDefaultReader<VideoFrame>,
+      destX: number,
+      destY: number,
+      scale: number
     ) => {
       const canvas = canvasRef.current;
       if (canvas === null) return;
@@ -48,25 +62,23 @@ function App(): JSX.Element {
 
       if (value === undefined) return;
 
-      canvas.height = (canvas.width * value.displayHeight) / value.displayWidth;
-
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(
         value,
         0,
         0,
         value.displayWidth,
         value.displayHeight,
-        0,
-        0,
-        canvas.width,
-        canvas.height
+        destX,
+        destY,
+        value.displayWidth * scale,
+        value.displayHeight * scale
       );
 
       value.close();
 
       if (!done) {
-        await readChunk(ctx, reader);
+        await readChunk(ctx, reader, destX, destY, scale);
       }
     },
     []
@@ -93,8 +105,8 @@ function App(): JSX.Element {
     const track = inputStreamRef.current.getVideoTracks()[0];
     const processor = new MediaStreamTrackProcessor({ track });
     const reader = processor.readable.getReader();
-    await readChunk(ctx, reader);
-  }, [readChunk]);
+    await readChunk(ctx, reader, destX, destY, scale);
+  }, [destX, destY, readChunk, scale]);
 
   /**
    * キャプチャ開始されたときのハンドラ
@@ -108,7 +120,7 @@ function App(): JSX.Element {
 
       // キャンバスの内容を MediaRecorder でキャプチャする
       const canvas = canvasRef.current;
-      captureStreamRef.current = canvas.captureStream();
+      captureStreamRef.current = canvas.captureStream(30);
       mediaRecorderRef.current = new MediaRecorder(captureStreamRef.current);
       mediaRecorderRef.current.addEventListener(
         "dataavailable",
@@ -208,13 +220,70 @@ function App(): JSX.Element {
       </p>
 
       <h2>モニタ</h2>
-      <canvas ref={canvasRef} width={720}></canvas>
+      <canvas
+        ref={canvasRef}
+        width={canvasWidth}
+        height={canvasHeight}
+        style={{ border: "2px solid black" }}
+      ></canvas>
+
+      <br />
+      <label>
+        X
+        <input
+          type="number"
+          value={-destX}
+          onChange={({ currentTarget }) => {
+            setDestX(-Number(currentTarget.value));
+          }}
+        />
+      </label>
+      <label>
+        Y
+        <input
+          type="number"
+          value={-destY}
+          onChange={({ currentTarget }) => {
+            setDestY(-Number(currentTarget.value));
+          }}
+        />
+      </label>
+      <label>
+        Scale
+        <input
+          type="number"
+          value={scale}
+          onChange={({ currentTarget }) => {
+            setScale(Number(currentTarget.value));
+          }}
+        />
+      </label>
+      <label>
+        Width
+        <input
+          type="number"
+          value={canvasWidth}
+          onChange={({ currentTarget }) => {
+            setCanvasWidth(Number(currentTarget.value));
+          }}
+        />
+      </label>
+      <label>
+        Height
+        <input
+          type="number"
+          value={canvasHeight}
+          onChange={({ currentTarget }) => {
+            setCanvasHeight(Number(currentTarget.value));
+          }}
+        />
+      </label>
 
       <h2>キャプチャ内容</h2>
-      <video ref={videoRef} width={720} controls></video>
+      <video ref={videoRef} controls></video>
 
       <h2>変換結果</h2>
-      <img ref={imageRef} width={720}></img>
+      <img ref={imageRef}></img>
       <pre ref={logRef}></pre>
     </>
   );
