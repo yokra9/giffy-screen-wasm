@@ -5,6 +5,24 @@ import "./App.css";
 
 const baseURL = "https://unpkg.com/@ffmpeg/core@latest/dist/esm";
 
+/**
+ * useRef と RefObject の更新関数をセットにしたカスタムフックです。
+ *
+ * @param initialValue 初期値
+ * @returns [refObject, 更新関数]
+ */
+function useSetRef<T>(
+  initialValue: T
+): [refObject: React.RefObject<T>, (value: T) => void] {
+  const refObject = useRef(initialValue);
+  return [
+    refObject,
+    (value: T) => {
+      refObject.current = value;
+    },
+  ];
+}
+
 function App(): JSX.Element {
   // @ffmpeg/core がロードされているかどうか
   const [loaded, setLoaded] = useState(false);
@@ -12,25 +30,37 @@ function App(): JSX.Element {
   // キャプチャデータ
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
-  // キャプチャ映像がキャンバス上のどこにあるか
-  const [destX, setDestX] = useState(0);
-  const [destY, setDestY] = useState(0);
-
-  // キャプチャ映像の表示倍率
-  const [scale, setScale] = useState(0.5);
+  // GIF動画（オブジェクト URL）
+  const [gif, setGif] = useState<string | undefined>(undefined);
 
   // キャンバスのサイズ
   const [canvasWidth, setCanvasWidth] = useState(1280);
   const [canvasHeight, setCanvasHeight] = useState(720);
 
+  // 描画の強制更新用フラグ: StateをRefObjectで代替している箇所のために強制更新が必要。
+  const [update, setUpdata] = useState(false);
+
+  // キャプチャ映像がキャンバス上のどこにあるか
+  const [destX, setDestX] = useSetRef(0);
+  const [destY, setDestY] = useSetRef(0);
+
+  // キャプチャ映像の表示倍率
+  const [scale, setScale] = useSetRef(0.5);
+
   const ffmpegRef = useRef(new FFmpeg());
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
   const logRef = useRef<HTMLPreElement>(null);
   const inputStreamRef = useRef<MediaStream>(null);
   const captureStreamRef = useRef<MediaStream>(null);
   const mediaRecorderRef = useRef<MediaRecorder>(null);
+
+  /**
+   * 描画の強制更新
+   */
+  const forceUpdate = useCallback(() => {
+    setUpdata(update ? false : true);
+  }, [update]);
 
   /**
    * MediaRecorder でデータが利用可能になったときのハンドラ
@@ -49,10 +79,7 @@ function App(): JSX.Element {
   const readChunk = useCallback(
     async (
       ctx: CanvasRenderingContext2D | null,
-      reader: ReadableStreamDefaultReader<VideoFrame>,
-      destX: number,
-      destY: number,
-      scale: number
+      reader: ReadableStreamDefaultReader<VideoFrame>
     ) => {
       const canvas = canvasRef.current;
       if (canvas === null) return;
@@ -69,19 +96,19 @@ function App(): JSX.Element {
         0,
         value.displayWidth,
         value.displayHeight,
-        destX,
-        destY,
-        value.displayWidth * scale,
-        value.displayHeight * scale
+        destX.current,
+        destY.current,
+        value.displayWidth * scale.current,
+        value.displayHeight * scale.current
       );
 
       value.close();
 
       if (!done) {
-        await readChunk(ctx, reader, destX, destY, scale);
+        await readChunk(ctx, reader);
       }
     },
-    []
+    [destX, destY, scale]
   );
 
   /**
@@ -105,8 +132,8 @@ function App(): JSX.Element {
     const track = inputStreamRef.current.getVideoTracks()[0];
     const processor = new MediaStreamTrackProcessor({ track });
     const reader = processor.readable.getReader();
-    await readChunk(ctx, reader, destX, destY, scale);
-  }, [destX, destY, readChunk, scale]);
+    await readChunk(ctx, reader);
+  }, [readChunk]);
 
   /**
    * キャプチャ開始されたときのハンドラ
@@ -115,7 +142,7 @@ function App(): JSX.Element {
     if (canvasRef.current === null) return;
 
     try {
-      // 前回のキャプチャ内容を削除
+      // キャプチャデータを削除
       setRecordedChunks([]);
 
       // キャンバスの内容を MediaRecorder でキャプチャする
@@ -179,16 +206,15 @@ function App(): JSX.Element {
    * GIFアニメに変換ボタンを押下されたときのハンドラ
    */
   const transcodeHandler = useCallback(async () => {
-    if (imageRef.current === null) return;
-
     // キャプチャデータを ffmpeg に読み込ませ、GIFアニメに変換する
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile("input", await fetchFile(new Blob(recordedChunks)));
     await ffmpeg.exec(["-i", "input", "output.gif"]);
     const data = await ffmpeg.readFile("output.gif");
-    imageRef.current.src = URL.createObjectURL(
-      new Blob([data], { type: "image/gif" })
-    );
+    setGif(URL.createObjectURL(new Blob([data], { type: "image/gif" })));
+
+    // キャプチャデータを削除
+    setRecordedChunks([]);
   }, [recordedChunks]);
 
   /**
@@ -232,9 +258,11 @@ function App(): JSX.Element {
         X
         <input
           type="number"
-          value={-destX}
+          value={destX.current}
+          step={10}
           onChange={({ currentTarget }) => {
-            setDestX(-Number(currentTarget.value));
+            setDestX(Number(currentTarget.value));
+            forceUpdate();
           }}
         />
       </label>
@@ -242,9 +270,11 @@ function App(): JSX.Element {
         Y
         <input
           type="number"
-          value={-destY}
+          value={destY.current}
+          step={10}
           onChange={({ currentTarget }) => {
-            setDestY(-Number(currentTarget.value));
+            setDestY(Number(currentTarget.value));
+            forceUpdate();
           }}
         />
       </label>
@@ -252,9 +282,11 @@ function App(): JSX.Element {
         Scale
         <input
           type="number"
-          value={scale}
+          value={scale.current}
+          step={0.01}
           onChange={({ currentTarget }) => {
             setScale(Number(currentTarget.value));
+            forceUpdate();
           }}
         />
       </label>
@@ -263,6 +295,7 @@ function App(): JSX.Element {
         <input
           type="number"
           value={canvasWidth}
+          step={10}
           onChange={({ currentTarget }) => {
             setCanvasWidth(Number(currentTarget.value));
           }}
@@ -273,6 +306,7 @@ function App(): JSX.Element {
         <input
           type="number"
           value={canvasHeight}
+          step={10}
           onChange={({ currentTarget }) => {
             setCanvasHeight(Number(currentTarget.value));
           }}
@@ -283,7 +317,7 @@ function App(): JSX.Element {
       <video ref={videoRef} controls />
 
       <h2>変換結果</h2>
-      <img ref={imageRef} />
+      <img src={gif} />
       <pre ref={logRef} />
     </>
   );
