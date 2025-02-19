@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect, JSX } from "react";
 import { FFmpeg, LogEvent } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import "./App.css";
 
 const baseURL = "https://unpkg.com/@ffmpeg/core@latest/dist/esm";
 
