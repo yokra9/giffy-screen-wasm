@@ -249,6 +249,20 @@ function App(): JSX.Element {
         ref={canvasRef}
         width={canvasWidth}
         height={canvasHeight}
+        onMouseMove={({ buttons, movementX, movementY }) => {
+          if (buttons !== 1) return;
+          setDestX(Number(destX.current + movementX));
+          setDestY(Number(destY.current + movementY));
+          forceUpdate();
+        }}
+        onWheel={({ deltaY }) => {
+          if (deltaY > 0) {
+            setScale(Number(scale.current - 0.01));
+          } else if (deltaY < 0) {
+            setScale(Number(scale.current + 0.01));
+          }
+          forceUpdate();
+        }}
         style={{ border: "2px solid black" }}
       />
 
