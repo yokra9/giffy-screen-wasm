@@ -228,19 +228,44 @@ function App(): JSX.Element {
   }, [recordedChunks]);
 
   return (
-    <>
+    <div className="px-2 py-2">
       <h1>画面キャプチャしてGIFアニメに変換</h1>
 
       <p>
         {loaded ? (
           <>
-            <button onClick={selectHandler}>画面選択</button>
-            <button onClick={startHandler}>キャプチャ開始</button>
-            <button onClick={stopHandler}>キャプチャ停止</button>
-            <button onClick={transcodeHandler}>GIFアニメに変換</button>
+            <button
+              onClick={selectHandler}
+              className="px-6 py-2 text-gray-700 font-bold rounded-3xl border-1 hover:bg-gray-100"
+            >
+              画面選択
+            </button>
+            <button
+              onClick={startHandler}
+              className="ml-2 px-6 py-2 text-green-700 font-bold rounded-3xl border-1 hover:bg-green-100"
+            >
+              キャプチャ開始
+            </button>
+            <button
+              onClick={stopHandler}
+              className="ml-2 px-6 py-2  text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
+            >
+              キャプチャ停止
+            </button>
+            <button
+              onClick={transcodeHandler}
+              className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
+            >
+              GIFアニメに変換
+            </button>
           </>
         ) : (
-          <button onClick={loadHandler}>@ffmpeg/core をロードする</button>
+          <button
+            onClick={loadHandler}
+            className="px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
+          >
+            @ffmpeg/core をロードする
+          </button>
         )}
       </p>
 
@@ -267,7 +292,7 @@ function App(): JSX.Element {
       />
 
       <br />
-      <label>
+      <label className="text-lg text-gray-700">
         X
         <input
           type="number"
@@ -277,9 +302,10 @@ function App(): JSX.Element {
             setDestX(Number(currentTarget.value));
             forceUpdate();
           }}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
-      <label>
+      <label className="ml-2 text-lg text-gray-700">
         Y
         <input
           type="number"
@@ -289,9 +315,10 @@ function App(): JSX.Element {
             setDestY(Number(currentTarget.value));
             forceUpdate();
           }}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
-      <label>
+      <label className="ml-2 text-lg text-gray-700">
         Scale
         <input
           type="number"
@@ -301,9 +328,10 @@ function App(): JSX.Element {
             setScale(Number(currentTarget.value));
             forceUpdate();
           }}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
-      <label>
+      <label className="ml-2 text-lg text-gray-700">
         Width
         <input
           type="number"
@@ -312,9 +340,10 @@ function App(): JSX.Element {
           onChange={({ currentTarget }) => {
             setCanvasWidth(Number(currentTarget.value));
           }}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
-      <label>
+      <label className="ml-2 text-lg text-gray-700">
         Height
         <input
           type="number"
@@ -323,6 +352,7 @@ function App(): JSX.Element {
           onChange={({ currentTarget }) => {
             setCanvasHeight(Number(currentTarget.value));
           }}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
 
@@ -332,7 +362,7 @@ function App(): JSX.Element {
       <h2>変換結果</h2>
       <img src={gif} />
       <pre ref={logRef} />
-    </>
+    </div>
   );
 }
 
