@@ -37,6 +37,7 @@ export default tseslint.config(
         }
       ],
       "quotes": ["error"],
+      "semi": ["error"],
     },
   },
 )
