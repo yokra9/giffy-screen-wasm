@@ -1,4 +1,11 @@
-import { useState, useRef, useCallback, useEffect, JSX } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  JSX,
+  MouseEvent,
+} from "react";
 import { FFmpeg, LogEvent } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
@@ -39,6 +46,9 @@ function App(): JSX.Element {
   // 描画の強制更新用フラグ: StateをRefObjectで代替している箇所のために強制更新が必要。
   const [update, setUpdata] = useState(false);
 
+  // ドラッグ開始位置がキャンバス内かどうかのフラグ
+  const [inCanvas, setInCanvas] = useState(false);
+
   // キャプチャ映像がキャンバス上のどこにあるか
   const [destX, setDestX] = useSetRef(0);
   const [destY, setDestY] = useSetRef(0);
@@ -64,7 +74,7 @@ function App(): JSX.Element {
   /**
    * MediaRecorder でデータが利用可能になったときのハンドラ
    */
-  const handleDataAvailable = useCallback(
+  const dataAvailableHandler = useCallback(
     ({ data }: BlobEvent) => {
       if (data.size === 0) return;
       setRecordedChunks([...recordedChunks, data]);
@@ -150,13 +160,13 @@ function App(): JSX.Element {
       mediaRecorderRef.current = new MediaRecorder(captureStreamRef.current);
       mediaRecorderRef.current.addEventListener(
         "dataavailable",
-        handleDataAvailable
+        dataAvailableHandler
       );
       mediaRecorderRef.current.start();
     } catch (err) {
       console.error(err);
     }
-  }, [handleDataAvailable]);
+  }, [dataAvailableHandler]);
 
   /**
    * キャプチャ停止されたときのハンドラ
@@ -270,26 +280,64 @@ function App(): JSX.Element {
       </p>
 
       <h2>モニタ</h2>
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        onMouseMove={({ buttons, movementX, movementY }) => {
-          if (buttons !== 1) return;
-          setDestX(Number(destX.current + movementX));
-          setDestY(Number(destY.current + movementY));
-          forceUpdate();
-        }}
-        onWheel={({ deltaY }) => {
-          if (deltaY > 0) {
-            setScale(Number(scale.current - 0.01));
-          } else if (deltaY < 0) {
-            setScale(Number(scale.current + 0.01));
+      <div
+        onMouseDown={({ clientX, clientY }) => {
+          const canvas = canvasRef.current;
+          if (canvas === null) return;
+          if (clientX > canvas.width - 100 || clientY > canvas.height - 100) {
+            setInCanvas(true);
+          } else {
+            setInCanvas(false);
           }
-          forceUpdate();
         }}
-        style={{ border: "2px solid black" }}
-      />
+        onMouseMove={({ buttons, clientX, clientY }) => {
+          if (buttons !== 1) return;
+
+          if (!inCanvas) {
+            return;
+          }
+
+          setCanvasWidth(clientX);
+          setCanvasHeight(clientY);
+        }}
+        className="bg-red-500 pb-10"
+      >
+        <canvas
+          ref={canvasRef}
+          width={canvasWidth}
+          height={canvasHeight}
+          onMouseDown={() => {
+            setInCanvas(true);
+          }}
+          onMouseMove={({
+            buttons,
+            movementX,
+            movementY,
+            clientX,
+            clientY,
+          }: MouseEvent) => {
+            if (buttons !== 1) return;
+
+            if (inCanvas) {
+              setCanvasWidth(clientX);
+              setCanvasHeight(clientY);
+            } else {
+              setDestX(Number(destX.current + movementX));
+              setDestY(Number(destY.current + movementY));
+              forceUpdate();
+            }
+          }}
+          onWheel={({ deltaY }) => {
+            if (deltaY > 0) {
+              setScale(Number(scale.current - 0.01));
+            } else if (deltaY < 0) {
+              setScale(Number(scale.current + 0.01));
+            }
+            forceUpdate();
+          }}
+          className="bg-black inline"
+        />
+      </div>
 
       <br />
       <label className="text-lg text-gray-700">
