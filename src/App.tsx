@@ -32,8 +32,16 @@ function useSetRef<T>(
 }
 
 function App(): JSX.Element {
-  // @ffmpeg/core がロードされているかどうか
-  const [loaded, setLoaded] = useState(false);
+  // 画面の状態
+  const [currentView, setCurretView] = useState<
+    | "init" // 初期表示
+    | "loaded" // ffmpeg ロード完了/画面選択/キャプチャ待機
+    | "captured" // キャプチャ完了/GIF変換待機
+    | "converted" // GIF変換完了
+  >("init");
+
+  // キャプチャ中かどうかのフラグ
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // キャプチャデータ
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
@@ -128,9 +136,14 @@ function App(): JSX.Element {
   const selectHandler = useCallback(async () => {
     if (canvasRef.current === null) return;
 
-    // ディスプレイの内容を MediaStream として取得
-    const canvas = canvasRef.current;
+    // inputStreamRef に内容があれば停止しておく
+    if (inputStreamRef.current !== null) {
+      inputStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
 
+    // ディスプレイの内容を MediaStream として取得して inputStreamRef に設定
     inputStreamRef.current = await navigator.mediaDevices.getDisplayMedia({
       video: {
         displaySurface: "window",
@@ -138,7 +151,8 @@ function App(): JSX.Element {
       audio: false,
     });
 
-    // キャンバスに inputStream から取得した映像を表示する
+    // キャンバスに inputStreamRef から取得した映像を表示する
+    const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     const track = inputStreamRef.current.getVideoTracks()[0];
     const processor = new MediaStreamTrackProcessor({ track });
@@ -153,6 +167,8 @@ function App(): JSX.Element {
     if (canvasRef.current === null) return;
 
     try {
+      setIsCapturing(true);
+
       // キャプチャデータを削除
       setRecordedChunks([]);
 
@@ -183,6 +199,9 @@ function App(): JSX.Element {
     captureStreamRef.current.getTracks().forEach((track) => {
       track.stop();
     });
+
+    setIsCapturing(false);
+    setCurretView("captured");
   }, []);
 
   /**
@@ -210,7 +229,7 @@ function App(): JSX.Element {
       ),
     });
 
-    setLoaded(true);
+    setCurretView("loaded");
   }, [logHandler]);
 
   /**
@@ -226,6 +245,8 @@ function App(): JSX.Element {
 
     // キャプチャデータを削除
     setRecordedChunks([]);
+
+    setCurretView("converted");
   }, [recordedChunks]);
 
   /**
@@ -349,6 +370,13 @@ function App(): JSX.Element {
   );
 
   /**
+   * もう一度ボタンが押下されたときのハンドラ
+   */
+  const restartHandler = useCallback(() => {
+    setCurretView("loaded");
+  }, []);
+
+  /**
    * キャプチャデータが変更されたときの処理
    */
   useEffect(() => {
@@ -363,121 +391,154 @@ function App(): JSX.Element {
     <div className="px-2 py-2">
       <h1>画面キャプチャしてGIFアニメに変換</h1>
 
-      <p>
-        {loaded ? (
-          <>
-            <button
-              onClick={() => void selectHandler()}
-              className="px-6 py-2 text-gray-700 font-bold rounded-3xl border-1 hover:bg-gray-100"
-            >
-              画面選択
-            </button>
-            <button
-              onClick={startHandler}
-              className="ml-2 px-6 py-2 text-green-700 font-bold rounded-3xl border-1 hover:bg-green-100"
-            >
-              キャプチャ開始
-            </button>
-            <button
-              onClick={stopHandler}
-              className="ml-2 px-6 py-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
-            >
-              キャプチャ停止
-            </button>
-            <button
-              onClick={() => void transcodeHandler()}
-              className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
-            >
-              GIFアニメに変換
-            </button>
-          </>
-        ) : (
+      {currentView === "init" && (
+        <p>
           <button
             onClick={() => void loadHandler()}
             className="px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
           >
             @ffmpeg/core をロードする
           </button>
-        )}
-      </p>
+        </p>
+      )}
 
-      <h2>モニタ</h2>
-      <div
-        onMouseDown={containerMouseDownHandler}
-        onMouseMove={containerMouseMoveHandler}
-        className="pb-10"
-      >
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
-          onMouseDown={() => {
-            setInCanvas(true);
-          }}
-          onMouseMove={canvasMouseMoveHandler}
-          onWheel={canvasWheelHandler}
-          className="bg-black inline"
-        />
-      </div>
+      {currentView === "loaded" && (
+        <>
+          <p>
+            <button
+              onClick={() => void selectHandler()}
+              className="px-6 py-2 text-gray-700 font-bold rounded-3xl border-1 hover:bg-gray-100"
+            >
+              画面選択
+            </button>
+            {isCapturing ? (
+              <button
+                onClick={stopHandler}
+                className="ml-2 px-6 py-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
+              >
+                キャプチャ停止
+              </button>
+            ) : (
+              <button
+                onClick={startHandler}
+                className="ml-2 px-6 py-2 text-green-700 font-bold rounded-3xl border-1 hover:bg-green-100"
+              >
+                キャプチャ開始
+              </button>
+            )}
+          </p>
 
-      <br />
-      <label className="text-lg text-gray-700">
-        X
-        <input
-          type="number"
-          value={destX.current}
-          step={10}
-          onChange={xInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Y
-        <input
-          type="number"
-          value={destY.current}
-          step={10}
-          onChange={yInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Scale
-        <input
-          type="number"
-          value={scale.current}
-          step={0.01}
-          onChange={scaleInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Width
-        <input
-          type="number"
-          value={canvasWidth}
-          step={10}
-          onChange={widthInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Height
-        <input
-          type="number"
-          value={canvasHeight}
-          step={10}
-          onChange={heightInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
+          <h2>モニタ</h2>
+          <div
+            onMouseDown={containerMouseDownHandler}
+            onMouseMove={containerMouseMoveHandler}
+            className="pb-10"
+          >
+            <canvas
+              ref={canvasRef}
+              width={canvasWidth}
+              height={canvasHeight}
+              onMouseDown={() => {
+                setInCanvas(true);
+              }}
+              onMouseMove={canvasMouseMoveHandler}
+              onWheel={canvasWheelHandler}
+              className="bg-black inline"
+            />
+          </div>
 
-      <h2>キャプチャ内容</h2>
-      <video ref={videoRef} controls />
+          <br />
+          <label className="text-lg text-gray-700">
+            X
+            <input
+              type="number"
+              value={destX.current}
+              step={10}
+              onChange={xInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
+          <label className="ml-2 text-lg text-gray-700">
+            Y
+            <input
+              type="number"
+              value={destY.current}
+              step={10}
+              onChange={yInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
+          <label className="ml-2 text-lg text-gray-700">
+            Scale
+            <input
+              type="number"
+              value={scale.current}
+              step={0.01}
+              onChange={scaleInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
+          <label className="ml-2 text-lg text-gray-700">
+            Width
+            <input
+              type="number"
+              value={canvasWidth}
+              step={10}
+              onChange={widthInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
+          <label className="ml-2 text-lg text-gray-700">
+            Height
+            <input
+              type="number"
+              value={canvasHeight}
+              step={10}
+              onChange={heightInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
+        </>
+      )}
 
-      <h2>変換結果</h2>
-      <img src={gif} />
-      <pre ref={logRef} />
+      {currentView === "captured" && (
+        <>
+          <p>
+            <button
+              onClick={() => void transcodeHandler()}
+              className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
+            >
+              GIFアニメに変換
+            </button>
+            <button
+              onClick={restartHandler}
+              className="ml-2 px-6 py-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
+            >
+              やりなおす
+            </button>
+          </p>
+
+          <h2>キャプチャ結果</h2>
+          <video ref={videoRef} controls autoPlay />
+        </>
+      )}
+
+      {currentView === "converted" && (
+        <>
+          <p>
+            <button
+              onClick={restartHandler}
+              className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
+            >
+              もう一度
+            </button>
+          </p>
+
+          <h2>変換結果</h2>
+          <img src={gif} />
+          <pre ref={logRef} />
+        </>
+      )}
     </div>
   );
 }
