@@ -27,7 +27,6 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
-      "@typescript-eslint/no-misused-promises": ["off"],
       "@typescript-eslint/strict-boolean-expressions": [
         "warn",
         {

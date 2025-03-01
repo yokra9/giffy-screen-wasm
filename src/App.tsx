@@ -367,7 +367,7 @@ function App(): JSX.Element {
         {loaded ? (
           <>
             <button
-              onClick={selectHandler}
+              onClick={() => void selectHandler()}
               className="px-6 py-2 text-gray-700 font-bold rounded-3xl border-1 hover:bg-gray-100"
             >
               画面選択
@@ -380,12 +380,12 @@ function App(): JSX.Element {
             </button>
             <button
               onClick={stopHandler}
-              className="ml-2 px-6 py-2  text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
+              className="ml-2 px-6 py-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
             >
               キャプチャ停止
             </button>
             <button
-              onClick={transcodeHandler}
+              onClick={() => void transcodeHandler()}
               className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
             >
               GIFアニメに変換
@@ -393,7 +393,7 @@ function App(): JSX.Element {
           </>
         ) : (
           <button
-            onClick={loadHandler}
+            onClick={() => void loadHandler()}
             className="px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
           >
             @ffmpeg/core をロードする
@@ -405,7 +405,7 @@ function App(): JSX.Element {
       <div
         onMouseDown={containerMouseDownHandler}
         onMouseMove={containerMouseMoveHandler}
-        className="bg-red-500 pb-10"
+        className="pb-10"
       >
         <canvas
           ref={canvasRef}
