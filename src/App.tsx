@@ -5,6 +5,8 @@ import {
   useEffect,
   JSX,
   MouseEvent,
+  WheelEvent,
+  ChangeEvent,
 } from "react";
 import { FFmpeg, LogEvent } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
@@ -227,6 +229,126 @@ function App(): JSX.Element {
   }, [recordedChunks]);
 
   /**
+   * キャンバス上でマウスが動いたときのハンドラ
+   */
+  const canvasMouseMoveHandler = useCallback(
+    ({ buttons, movementX, movementY, clientX, clientY }: MouseEvent) => {
+      if (buttons !== 1) return;
+
+      if (inCanvas) {
+        setCanvasWidth(clientX);
+        setCanvasHeight(clientY);
+      } else {
+        setDestX(Number(destX.current + movementX));
+        setDestY(Number(destY.current + movementY));
+        forceUpdate();
+      }
+    },
+    [destX, destY, forceUpdate, inCanvas, setDestX, setDestY]
+  );
+
+  /**
+   * キャンバス上でスクロールされたときのハンドラ
+   */
+  const canvasWheelHandler = useCallback(
+    ({ deltaY }: WheelEvent) => {
+      if (deltaY > 0) {
+        setScale(Number(scale.current - 0.01));
+      } else if (deltaY < 0) {
+        setScale(Number(scale.current + 0.01));
+      }
+      forceUpdate();
+    },
+    [forceUpdate, scale, setScale]
+  );
+
+  /**
+   * コンテナ要素上でマウスが動いたときのハンドラ
+   */
+  const containerMouseDownHandler = useCallback(
+    ({ clientX, clientY }: MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (canvas === null) return;
+      if (clientX > canvas.width - 100 || clientY > canvas.height - 100) {
+        setInCanvas(true);
+      } else {
+        setInCanvas(false);
+      }
+    },
+    []
+  );
+
+  /**
+   * コンテナ要素上でマウスが押下されたときのハンドラ
+   */
+  const containerMouseMoveHandler = useCallback(
+    ({ buttons, clientX, clientY }: MouseEvent) => {
+      if (buttons !== 1) return;
+
+      if (!inCanvas) {
+        return;
+      }
+
+      setCanvasWidth(clientX);
+      setCanvasHeight(clientY);
+    },
+    [inCanvas]
+  );
+
+  /**
+   * X 入力が変更されたときのハンドラ
+   */
+  const xInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setDestX(Number(currentTarget.value));
+      forceUpdate();
+    },
+    [forceUpdate, setDestX]
+  );
+
+  /**
+   * Y 入力が変更されたときのハンドラ
+   */
+  const yInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setDestY(Number(currentTarget.value));
+      forceUpdate();
+    },
+    [forceUpdate, setDestY]
+  );
+
+  /**
+   * Scale 入力が変更されたときのハンドラ
+   */
+  const scaleInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setScale(Number(currentTarget.value));
+      forceUpdate();
+    },
+    [forceUpdate, setScale]
+  );
+
+  /**
+   * Width 入力が変更されたときのハンドラ
+   */
+  const widthInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setCanvasWidth(Number(currentTarget.value));
+    },
+    []
+  );
+
+  /**
+   * Height 入力が変更されたときのハンドラ
+   */
+  const heightInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setCanvasHeight(Number(currentTarget.value));
+    },
+    []
+  );
+
+  /**
    * キャプチャデータが変更されたときの処理
    */
   useEffect(() => {
@@ -281,25 +403,8 @@ function App(): JSX.Element {
 
       <h2>モニタ</h2>
       <div
-        onMouseDown={({ clientX, clientY }) => {
-          const canvas = canvasRef.current;
-          if (canvas === null) return;
-          if (clientX > canvas.width - 100 || clientY > canvas.height - 100) {
-            setInCanvas(true);
-          } else {
-            setInCanvas(false);
-          }
-        }}
-        onMouseMove={({ buttons, clientX, clientY }) => {
-          if (buttons !== 1) return;
-
-          if (!inCanvas) {
-            return;
-          }
-
-          setCanvasWidth(clientX);
-          setCanvasHeight(clientY);
-        }}
+        onMouseDown={containerMouseDownHandler}
+        onMouseMove={containerMouseMoveHandler}
         className="bg-red-500 pb-10"
       >
         <canvas
@@ -309,32 +414,8 @@ function App(): JSX.Element {
           onMouseDown={() => {
             setInCanvas(true);
           }}
-          onMouseMove={({
-            buttons,
-            movementX,
-            movementY,
-            clientX,
-            clientY,
-          }: MouseEvent) => {
-            if (buttons !== 1) return;
-
-            if (inCanvas) {
-              setCanvasWidth(clientX);
-              setCanvasHeight(clientY);
-            } else {
-              setDestX(Number(destX.current + movementX));
-              setDestY(Number(destY.current + movementY));
-              forceUpdate();
-            }
-          }}
-          onWheel={({ deltaY }) => {
-            if (deltaY > 0) {
-              setScale(Number(scale.current - 0.01));
-            } else if (deltaY < 0) {
-              setScale(Number(scale.current + 0.01));
-            }
-            forceUpdate();
-          }}
+          onMouseMove={canvasMouseMoveHandler}
+          onWheel={canvasWheelHandler}
           className="bg-black inline"
         />
       </div>
@@ -346,10 +427,7 @@ function App(): JSX.Element {
           type="number"
           value={destX.current}
           step={10}
-          onChange={({ currentTarget }) => {
-            setDestX(Number(currentTarget.value));
-            forceUpdate();
-          }}
+          onChange={xInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
@@ -359,10 +437,7 @@ function App(): JSX.Element {
           type="number"
           value={destY.current}
           step={10}
-          onChange={({ currentTarget }) => {
-            setDestY(Number(currentTarget.value));
-            forceUpdate();
-          }}
+          onChange={yInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
@@ -372,10 +447,7 @@ function App(): JSX.Element {
           type="number"
           value={scale.current}
           step={0.01}
-          onChange={({ currentTarget }) => {
-            setScale(Number(currentTarget.value));
-            forceUpdate();
-          }}
+          onChange={scaleInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
@@ -385,9 +457,7 @@ function App(): JSX.Element {
           type="number"
           value={canvasWidth}
           step={10}
-          onChange={({ currentTarget }) => {
-            setCanvasWidth(Number(currentTarget.value));
-          }}
+          onChange={widthInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
@@ -397,9 +467,7 @@ function App(): JSX.Element {
           type="number"
           value={canvasHeight}
           step={10}
-          onChange={({ currentTarget }) => {
-            setCanvasHeight(Number(currentTarget.value));
-          }}
+          onChange={heightInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
