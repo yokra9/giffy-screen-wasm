@@ -1,4 +1,11 @@
-import { useState, useRef, useCallback, useEffect, JSX } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  JSX,
+  ChangeEvent,
+} from "react";
 import { FFmpeg, LogEvent } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import DisplayRecorder from "./DisplayRecorder";
@@ -21,8 +28,21 @@ function App(): JSX.Element {
   // キャプチャデータ
   const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
+  // FPS
+  const [fps, setFps] = useState(30);
+
   // GIF動画（オブジェクト URL）
   const [gif, setGif] = useState<string | undefined>(undefined);
+
+  /**
+   * FPS 入力が変更されたときのハンドラ
+   */
+  const fpsInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setFps(Number(currentTarget.value));
+    },
+    [setFps]
+  );
 
   /**
    * ffmpeg でログが出力されたときのハンドラ
@@ -59,7 +79,7 @@ function App(): JSX.Element {
     // キャプチャデータを ffmpeg に読み込ませ、GIFアニメに変換する
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile("input", await fetchFile(new Blob(recordedChunks)));
-    await ffmpeg.exec(["-i", "input", "output.gif"]);
+    await ffmpeg.exec(["-i", "input", "-r", fps.toString(), "output.gif"]);
     const data = await ffmpeg.readFile("output.gif");
     setGif(URL.createObjectURL(new Blob([data], { type: "image/gif" })));
 
@@ -67,7 +87,7 @@ function App(): JSX.Element {
     setRecordedChunks([]);
 
     setCurretView("converted");
-  }, [recordedChunks]);
+  }, [fps, recordedChunks]);
 
   /**
    * もう一度ボタンが押下されたときのハンドラ
@@ -108,6 +128,8 @@ function App(): JSX.Element {
             recordedChunks={recordedChunks}
             setRecordedChunks={setRecordedChunks}
             setCurretView={setCurretView}
+            fps={fps}
+            setFps={setFps}
           />
         </>
       )}
@@ -131,6 +153,16 @@ function App(): JSX.Element {
 
           <h2>キャプチャ結果</h2>
           <video ref={videoRef} controls autoPlay />
+
+          <label className="ml-2 text-lg text-gray-700">
+            FPS
+            <input
+              type="number"
+              value={fps}
+              onChange={fpsInputChangeHandler}
+              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+            />
+          </label>
         </>
       )}
 

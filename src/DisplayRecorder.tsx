@@ -41,6 +41,14 @@ interface Props {
   setCurretView: (
     value: React.SetStateAction<"captured" | "init" | "loaded" | "converted">
   ) => void;
+  /**
+   * FPS
+   */
+  fps: number;
+  /**
+   * FPSのセッタ
+   */
+  setFps: (value: React.SetStateAction<number>) => void;
 }
 
 /**
@@ -50,6 +58,8 @@ function DisplayRecorder({
   recordedChunks,
   setRecordedChunks,
   setCurretView,
+  fps,
+  setFps,
 }: Props): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputStreamRef = useRef<MediaStream>(null);
@@ -176,7 +186,7 @@ function DisplayRecorder({
 
       // キャンバスの内容を MediaRecorder でキャプチャする
       const canvas = canvasRef.current;
-      captureStreamRef.current = canvas.captureStream(30);
+      captureStreamRef.current = canvas.captureStream(fps);
       mediaRecorderRef.current = new MediaRecorder(captureStreamRef.current);
       mediaRecorderRef.current.addEventListener(
         "dataavailable",
@@ -186,7 +196,7 @@ function DisplayRecorder({
     } catch (err) {
       console.error(err);
     }
-  }, [dataAvailableHandler, setRecordedChunks]);
+  }, [dataAvailableHandler, fps, setRecordedChunks]);
 
   /**
    * キャプチャ停止されたときのハンドラ
@@ -307,6 +317,16 @@ function DisplayRecorder({
   );
 
   /**
+   * FPS 入力が変更されたときのハンドラ
+   */
+  const fpsInputChangeHandler = useCallback(
+    ({ currentTarget }: ChangeEvent<HTMLInputElement>) => {
+      setFps(Number(currentTarget.value));
+    },
+    [setFps]
+  );
+
+  /**
    * Width 入力が変更されたときのハンドラ
    */
   const widthInputChangeHandler = useCallback(
@@ -399,6 +419,15 @@ function DisplayRecorder({
           value={scale.current}
           step={0.01}
           onChange={scaleInputChangeHandler}
+          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
+        />
+      </label>
+      <label className="ml-2 text-lg text-gray-700">
+        FPS
+        <input
+          type="number"
+          value={fps}
+          onChange={fpsInputChangeHandler}
           className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
         />
       </label>
