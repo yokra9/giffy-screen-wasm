@@ -51,6 +51,9 @@ interface Props {
   setFps: (value: React.SetStateAction<number>) => void;
 }
 
+// キャンバスの縁として扱うピクセル数。
+const fringeSize = 10;
+
 /**
  * 画面録画コンポーネント
  */
@@ -73,8 +76,13 @@ function DisplayRecorder({
   const [canvasWidth, setCanvasWidth] = useState(1280);
   const [canvasHeight, setCanvasHeight] = useState(720);
 
+  // マウスカーソルの状態
+  const [mouseCursor, setMouseCursor] = useState<
+    "cursor-move" | "cursor-nwse-resize"
+  >("cursor-move");
+
   // ドラッグ開始位置がキャンバス内かのフラグ
-  const [inCanvas, setInCanvas] = useState(false);
+  const [dragStartInCanvas, setDragStartInCanvas] = useState(false);
 
   // キャプチャ映像がキャンバス上のどこにあるか
   const [destX, setDestX] = useSetRef(0);
@@ -217,22 +225,58 @@ function DisplayRecorder({
   }, [setCurretView]);
 
   /**
-   * キャンバス上でマウスが動いたときのハンドラ
+   * コンテナ要素上でマウスが押下されたときのハンドラ
    */
-  const canvasMouseMoveHandler = useCallback(
-    ({ buttons, movementX, movementY, clientX, clientY }: MouseEvent) => {
-      if (buttons !== 1) return;
-
-      if (inCanvas) {
-        setCanvasWidth(clientX);
-        setCanvasHeight(clientY);
+  const containerMouseDownHandler = useCallback(
+    ({ clientX, clientY }: MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (canvas === null) return;
+      // キャンバスの縁より内側でマウスが押下された場合はキャンバス内として扱う
+      if (
+        clientX < canvas.width - fringeSize ||
+        clientY < canvas.height - fringeSize
+      ) {
+        setDragStartInCanvas(true);
       } else {
-        setDestX(Number(destX.current + movementX));
-        setDestY(Number(destY.current + movementY));
-        forceUpdate();
+        setDragStartInCanvas(false);
       }
     },
-    [destX, destY, forceUpdate, inCanvas, setDestX, setDestY]
+    []
+  );
+
+  /**
+   * コンテナ要素上でマウスが動いたときのハンドラ
+   */
+  const containerMouseMoveHandler = useCallback(
+    ({ buttons, movementX, movementY, clientX, clientY }: MouseEvent) => {
+      if (buttons === 1) {
+        // ドラッグ中の場合
+        if (dragStartInCanvas) {
+          setMouseCursor("cursor-move");
+          setDestX(Number(destX.current + movementX));
+          setDestY(Number(destY.current + movementY));
+          forceUpdate();
+        } else {
+          setMouseCursor("cursor-nwse-resize");
+          setCanvasWidth(clientX);
+          setCanvasHeight(clientY);
+        }
+      } else {
+        const canvas = canvasRef.current;
+        if (canvas === null) return;
+
+        // キャンバスの縁より内側でマウスが動いた場合はキャンバス内として扱う
+        if (
+          clientX < canvas.width - fringeSize ||
+          clientY < canvas.height - fringeSize
+        ) {
+          setMouseCursor("cursor-move");
+        } else {
+          setMouseCursor("cursor-nwse-resize");
+        }
+      }
+    },
+    [destX, destY, forceUpdate, dragStartInCanvas, setDestX, setDestY]
   );
 
   /**
@@ -248,39 +292,6 @@ function DisplayRecorder({
       forceUpdate();
     },
     [forceUpdate, scale, setScale]
-  );
-
-  /**
-   * コンテナ要素上でマウスが動いたときのハンドラ
-   */
-  const containerMouseDownHandler = useCallback(
-    ({ clientX, clientY }: MouseEvent) => {
-      const canvas = canvasRef.current;
-      if (canvas === null) return;
-      if (clientX > canvas.width - 100 || clientY > canvas.height - 100) {
-        setInCanvas(true);
-      } else {
-        setInCanvas(false);
-      }
-    },
-    []
-  );
-
-  /**
-   * コンテナ要素上でマウスが押下されたときのハンドラ
-   */
-  const containerMouseMoveHandler = useCallback(
-    ({ buttons, clientX, clientY }: MouseEvent) => {
-      if (buttons !== 1) return;
-
-      if (!inCanvas) {
-        return;
-      }
-
-      setCanvasWidth(clientX);
-      setCanvasHeight(clientY);
-    },
-    [inCanvas]
   );
 
   /**
@@ -376,18 +387,14 @@ function DisplayRecorder({
       <div
         onMouseDown={containerMouseDownHandler}
         onMouseMove={containerMouseMoveHandler}
-        className="pb-10"
+        className={`pb-10 ${mouseCursor}`}
       >
         <canvas
           ref={canvasRef}
           width={canvasWidth}
           height={canvasHeight}
-          onMouseDown={() => {
-            setInCanvas(true);
-          }}
-          onMouseMove={canvasMouseMoveHandler}
           onWheel={canvasWheelHandler}
-          className="bg-black inline"
+          className={`bg-black inline ${mouseCursor}`}
         />
       </div>
 

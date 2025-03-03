@@ -179,9 +179,10 @@ function App(): JSX.Element {
 
           <h2>変換結果</h2>
           <img src={gif} />
-          <pre ref={logRef} />
         </>
       )}
+
+      <pre ref={logRef} />
     </div>
   );
 }
