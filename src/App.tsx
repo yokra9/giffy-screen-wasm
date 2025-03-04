@@ -94,6 +94,9 @@ function App(): JSX.Element {
    */
   const restartHandler = useCallback(() => {
     setCurretView("loaded");
+
+    if (logRef.current === null || logRef.current.textContent === null) return;
+    logRef.current.textContent = "";
   }, []);
 
   /**
@@ -109,10 +112,8 @@ function App(): JSX.Element {
 
   return (
     <div className="px-2 py-2">
-      <h1>画面キャプチャしてGIFアニメに変換</h1>
-
       {currentView === "init" && (
-        <p>
+        <p className="mb-4 pb-4 border-b-2 border-gray-400">
           <button
             onClick={() => void loadHandler()}
             className="px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
@@ -136,10 +137,10 @@ function App(): JSX.Element {
 
       {currentView === "captured" && (
         <>
-          <p>
+          <p className="mb-4 pb-4 border-b-2 border-gray-400">
             <button
               onClick={() => void transcodeHandler()}
-              className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
+              className="px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
             >
               GIFアニメに変換
             </button>
@@ -151,24 +152,27 @@ function App(): JSX.Element {
             </button>
           </p>
 
-          <h2>キャプチャ結果</h2>
-          <video ref={videoRef} controls autoPlay />
-
-          <label className="ml-2 text-lg text-gray-700">
-            FPS
-            <input
-              type="number"
-              value={fps}
-              onChange={fpsInputChangeHandler}
-              className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-            />
-          </label>
+          <div className="grid gap-4 grid-cols-1 xl:grid-cols-[1fr_auto]">
+            <video ref={videoRef} controls autoPlay />
+            <div className="grid gap-4 grid-cols-2 h-auto pl-4 pt-2 border-l-2 border-gray-400">
+              <label className="text-md text-gray-700">
+                GIF のフレームレート
+                <br />
+                <input
+                  type="number"
+                  value={fps}
+                  onChange={fpsInputChangeHandler}
+                  className="text-sm leading-none font-medium border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+                />
+              </label>
+            </div>
+          </div>
         </>
       )}
 
       {currentView === "converted" && (
         <>
-          <p>
+          <p className="mb-4 pb-4 border-b-2 border-gray-400">
             <button
               onClick={restartHandler}
               className="ml-2 px-6 py-2 text-white font-bold rounded-3xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400"
@@ -177,7 +181,6 @@ function App(): JSX.Element {
             </button>
           </p>
 
-          <h2>変換結果</h2>
           <img src={gif} />
         </>
       )}

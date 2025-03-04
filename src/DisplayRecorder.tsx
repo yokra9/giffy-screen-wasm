@@ -73,8 +73,8 @@ function DisplayRecorder({
   const [isCapturing, setIsCapturing] = useState(false);
 
   // キャンバスのサイズ
-  const [canvasWidth, setCanvasWidth] = useState(1280);
-  const [canvasHeight, setCanvasHeight] = useState(720);
+  const [canvasWidth, setCanvasWidth] = useState(560);
+  const [canvasHeight, setCanvasHeight] = useState(315);
 
   // マウスカーソルの状態
   const [mouseCursor, setMouseCursor] = useState<
@@ -210,6 +210,8 @@ function DisplayRecorder({
    * キャプチャ停止されたときのハンドラ
    */
   const stopHandler = useCallback(() => {
+    setIsCapturing(false);
+
     if (inputStreamRef.current === null) return;
     inputStreamRef.current.getTracks().forEach((track) => {
       track.stop();
@@ -220,7 +222,6 @@ function DisplayRecorder({
       track.stop();
     });
 
-    setIsCapturing(false);
     setCurretView("captured");
   }, [setCurretView]);
 
@@ -258,8 +259,8 @@ function DisplayRecorder({
           forceUpdate();
         } else {
           setMouseCursor("cursor-nwse-resize");
-          setCanvasWidth(clientX);
-          setCanvasHeight(clientY);
+          setCanvasWidth(clientX - 2);
+          setCanvasHeight(clientY - 54);
         }
       } else {
         const canvas = canvasRef.current;
@@ -359,7 +360,7 @@ function DisplayRecorder({
 
   return (
     <>
-      <p>
+      <p className="mb-2 pb-2 border-b-2 border-gray-400">
         <button
           onClick={() => void selectHandler()}
           className="px-6 py-2 text-gray-700 font-bold rounded-3xl border-1 hover:bg-gray-100"
@@ -369,95 +370,109 @@ function DisplayRecorder({
         {isCapturing ? (
           <button
             onClick={stopHandler}
-            className="ml-2 px-6 py-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
+            className="px-6 py-2 ml-2 text-red-700 font-bold rounded-3xl border-1 hover:bg-red-100"
           >
             キャプチャ停止
           </button>
         ) : (
           <button
             onClick={startHandler}
-            className="ml-2 px-6 py-2 text-green-700 font-bold rounded-3xl border-1 hover:bg-green-100"
+            className="px-6 py-2 ml-2 text-green-700 font-bold rounded-3xl border-1 hover:bg-green-100"
           >
             キャプチャ開始
           </button>
         )}
       </p>
 
-      <h2>モニタ</h2>
-      <div
-        onMouseDown={containerMouseDownHandler}
-        onMouseMove={containerMouseMoveHandler}
-        className={`pb-10 ${mouseCursor}`}
-      >
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={canvasHeight}
-          onWheel={canvasWheelHandler}
-          className={`bg-black inline ${mouseCursor}`}
-        />
-      </div>
+      <div className="grid gap-4 grid-cols-1 xl:grid-cols-[1fr_auto]">
+        <div
+          onMouseDown={containerMouseDownHandler}
+          onMouseMove={containerMouseMoveHandler}
+          className={`pb-10 ${mouseCursor}`}
+        >
+          <canvas
+            ref={canvasRef}
+            width={canvasWidth}
+            height={canvasHeight}
+            onWheel={canvasWheelHandler}
+            className={`bg-black inline ${mouseCursor}`}
+          />
+        </div>
 
-      <br />
-      <label className="text-lg text-gray-700">
-        X
-        <input
-          type="number"
-          value={destX.current}
-          step={10}
-          onChange={xInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Y
-        <input
-          type="number"
-          value={destY.current}
-          step={10}
-          onChange={yInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Scale
-        <input
-          type="number"
-          value={scale.current}
-          step={0.01}
-          onChange={scaleInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        FPS
-        <input
-          type="number"
-          value={fps}
-          onChange={fpsInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Width
-        <input
-          type="number"
-          value={canvasWidth}
-          step={10}
-          onChange={widthInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
-      <label className="ml-2 text-lg text-gray-700">
-        Height
-        <input
-          type="number"
-          value={canvasHeight}
-          step={10}
-          onChange={heightInputChangeHandler}
-          className="text-sm leading-none font-medium border border-gray-300 rounded-md ml-2 px-2 py-1 focus:outline-none focus:border-blue-500 "
-        />
-      </label>
+        <div className="h-auto pl-4 pt-2 border-l-2 border-gray-400">
+          <span className="font-bold ">入力映像</span>
+          <div className="grid gap-4 grid-cols-2 my-2">
+            <label className="text-md text-gray-700">
+              X 座標
+              <br />
+              <input
+                type="number"
+                value={destX.current}
+                step={10}
+                onChange={xInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+            <label className="text-md text-gray-700">
+              Y 座標
+              <br />
+              <input
+                type="number"
+                value={destY.current}
+                step={10}
+                onChange={yInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+            <label className="text-md text-gray-700">
+              倍率
+              <br />
+              <input
+                type="number"
+                value={scale.current}
+                step={0.01}
+                onChange={scaleInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+            <label className="text-md text-gray-700">
+              フレームレート
+              <br />
+              <input
+                type="number"
+                value={fps}
+                onChange={fpsInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+          </div>
+          <span className="font-bold">出力映像</span>
+          <div className="grid gap-4 grid-cols-2 my-2">
+            <label className="text-md text-gray-700">
+              幅
+              <br />
+              <input
+                type="number"
+                value={canvasWidth}
+                step={10}
+                onChange={widthInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+            <label className="text-md text-gray-700">
+              高さ
+              <br />
+              <input
+                type="number"
+                value={canvasHeight}
+                step={10}
+                onChange={heightInputChangeHandler}
+                className="leading-none font-bold border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-blue-500 "
+              />
+            </label>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
