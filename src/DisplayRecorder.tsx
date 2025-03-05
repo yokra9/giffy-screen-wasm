@@ -384,11 +384,11 @@ function DisplayRecorder({
         )}
       </p>
 
-      <div className="grid gap-4 grid-cols-1 xl:grid-cols-[1fr_auto]">
+      <div className="grid gap-4 grid-cols-1 xl:grid-cols-[1fr_auto] ">
         <div
           onMouseDown={containerMouseDownHandler}
           onMouseMove={containerMouseMoveHandler}
-          className={`pb-10 ${mouseCursor}`}
+          className={`pb-10 ${mouseCursor} select-none`}
         >
           <canvas
             ref={canvasRef}
@@ -399,7 +399,7 @@ function DisplayRecorder({
           />
         </div>
 
-        <div className="h-auto pl-4 pt-2 border-l-2 border-gray-400">
+        <div className="h-fit pl-4 py-2 border-b-2 border-gray-400">
           <span className="font-bold ">入力映像</span>
           <div className="grid gap-4 grid-cols-2 my-2">
             <label className="text-md text-gray-700">
