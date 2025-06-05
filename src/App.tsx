@@ -83,17 +83,18 @@ function App(): JSX.Element {
     const data = await ffmpeg.readFile("output.gif");
     setGif(URL.createObjectURL(new Blob([data], { type: "image/gif" })));
 
-    // キャプチャデータを削除
-    setRecordedChunks([]);
 
     setCurretView("converted");
   }, [fps, recordedChunks]);
 
   /**
-   * もう一度ボタンが押下されたときのハンドラ
+   * もう一度・やりなおすボタンが押下されたときのハンドラ
    */
   const restartHandler = useCallback(() => {
     setCurretView("loaded");
+
+    // キャプチャデータを削除
+    setRecordedChunks([]);
 
     if (logRef.current === null || logRef.current.textContent === null) return;
     logRef.current.textContent = "";

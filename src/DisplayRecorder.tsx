@@ -189,9 +189,6 @@ function DisplayRecorder({
     try {
       setIsCapturing(true);
 
-      // キャプチャデータを削除
-      setRecordedChunks([]);
-
       // キャンバスの内容を MediaRecorder でキャプチャする
       const canvas = canvasRef.current;
       captureStreamRef.current = canvas.captureStream(fps);
@@ -204,7 +201,7 @@ function DisplayRecorder({
     } catch (err) {
       console.error(err);
     }
-  }, [dataAvailableHandler, fps, setRecordedChunks]);
+  }, [dataAvailableHandler, fps]);
 
   /**
    * キャプチャ停止されたときのハンドラ
