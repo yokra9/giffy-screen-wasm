@@ -50,7 +50,7 @@ function App(): JSX.Element {
   const logHandler = useCallback(({ message }: LogEvent) => {
     console.log(message);
 
-    if (logRef.current === null || logRef.current.textContent === null) return;
+    if (logRef.current === null) return;
     logRef.current.textContent += `\n${message}`;
   }, []);
 
@@ -81,7 +81,12 @@ function App(): JSX.Element {
     await ffmpeg.writeFile("input", await fetchFile(new Blob(recordedChunks)));
     await ffmpeg.exec(["-i", "input", "-r", fps.toString(), "output.gif"]);
     const data = await ffmpeg.readFile("output.gif");
-    setGif(URL.createObjectURL(new Blob([data], { type: "image/gif" })));
+    if(!(data instanceof Uint8Array)) return;
+
+    const buffer = new ArrayBuffer(data.length);
+    const view = new Uint8Array(buffer);
+    view.set(data);
+    setGif(URL.createObjectURL(new Blob([buffer], { type: "image/gif" })));
 
 
     setCurretView("converted");
@@ -96,7 +101,7 @@ function App(): JSX.Element {
     // キャプチャデータを削除
     setRecordedChunks([]);
 
-    if (logRef.current === null || logRef.current.textContent === null) return;
+    if (logRef.current === null) return;
     logRef.current.textContent = "";
   }, []);
 
