@@ -50,7 +50,7 @@ function App(): JSX.Element {
   const logHandler = useCallback(({ message }: LogEvent) => {
     console.log(message);
 
-    if (logRef.current === null) return;
+    if (logRef.current === null || logRef.current.textContent === null) return;
     logRef.current.textContent += `\n${message}`;
   }, []);
 
@@ -80,13 +80,13 @@ function App(): JSX.Element {
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile("input", await fetchFile(new Blob(recordedChunks)));
     await ffmpeg.exec(["-i", "input", "-r", fps.toString(), "output.gif"]);
-    const data = await ffmpeg.readFile("output.gif");
-    if(!(data instanceof Uint8Array)) return;
-
-    const buffer = new ArrayBuffer(data.length);
-    const view = new Uint8Array(buffer);
-    view.set(data);
-    setGif(URL.createObjectURL(new Blob([buffer], { type: "image/gif" })));
+    const wasmBuffer = await ffmpeg.readFile("output.gif");
+    if(!(wasmBuffer instanceof Uint8Array)) throw new Error("Failed to read output.gif");
+    const arrayBuffer = new ArrayBuffer(wasmBuffer.length);
+    const arrayBufferView = new Uint8Array(arrayBuffer);
+    arrayBufferView.set(wasmBuffer);
+    // GIF動画のオブジェクト URL を生成
+    setGif(URL.createObjectURL(new Blob([arrayBuffer], { type: "image/gif" })));
 
 
     setCurretView("converted");
