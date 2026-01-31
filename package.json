@@ -13,14 +13,14 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@tailwindcss/vite": "^4.1.18",
-    "react": "^19.1.1",
+    "react": "^19.2.4",
     "react-dom": "^19.2.3",
     "tailwindcss": "^4.1.17"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/dom-mediacapture-transform": "^0.1.11",
-    "@types/react": "^19.2.6",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "eslint": "^9.39.2",
