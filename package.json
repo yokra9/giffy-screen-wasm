@@ -14,7 +14,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@tailwindcss/vite": "^4.3.2",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
